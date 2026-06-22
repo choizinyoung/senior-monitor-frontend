@@ -1,11 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useMonitorStore } from "@/store/useMonitorStore";
 
 export default function MobileSidebarBackdrop() {
   const { sidebarOpen, closeSidebar } = useMonitorStore();
+  const [mounted, setMounted] = useState(false);
 
-  if (!sidebarOpen) return null;
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted || !sidebarOpen) return null;
 
   return (
     <div

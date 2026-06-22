@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, Label, Input, Select, Textarea } from "@/components/atoms";
 import { PROCESS_STATUS_OPTIONS } from "@/constants";
 
@@ -18,13 +18,12 @@ interface ConfirmData {
   memo: string;
 }
 
-function todayStr() {
-  return new Date().toISOString().split("T")[0];
-}
-function nowTimeStr() {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
+const EMPTY_FORM: ConfirmData = {
+  date: "",
+  time: "",
+  processStatus: PROCESS_STATUS_OPTIONS[0],
+  memo: "",
+};
 
 export default function ConfirmProcessModal({
   isOpen,
@@ -32,12 +31,19 @@ export default function ConfirmProcessModal({
   seniorName = "김영희",
   onSave,
 }: ConfirmProcessModalProps) {
-  const [form, setForm] = useState<ConfirmData>({
-    date: todayStr(),
-    time: nowTimeStr(),
-    processStatus: PROCESS_STATUS_OPTIONS[0],
-    memo: "",
-  });
+  const [form, setForm] = useState<ConfirmData>(EMPTY_FORM);
+
+  // 모달이 열릴 때 현재 날짜/시간으로 초기화 (클라이언트에서만)
+  useEffect(() => {
+    if (!isOpen) return;
+    const now = new Date();
+    setForm({
+      date: now.toISOString().split("T")[0],
+      time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      processStatus: PROCESS_STATUS_OPTIONS[0],
+      memo: "",
+    });
+  }, [isOpen]);
 
   const set = (key: keyof ConfirmData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }));
