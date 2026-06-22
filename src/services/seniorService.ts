@@ -1,47 +1,47 @@
 import { apiClient } from "@/lib/apiClient";
 import type { Senior } from "@/types";
+import { MOCK_SENIORS } from "@/mocks/seniors";
 
-export interface SeniorListParams {
-  page?: number;
-  size?: number;
-  name?: string;
-  severity?: string;
-  district?: string;
-}
-
-export interface PagedResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  page: number;
-  size: number;
-}
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export type CreateSeniorDto = Omit<Senior, "id" | "registeredAt">;
 export type UpdateSeniorDto = Partial<CreateSeniorDto>;
 
-export const seniorService = {
-  list: (params: SeniorListParams = {}) => {
-    const query = new URLSearchParams();
-    if (params.page !== undefined) query.set("page", String(params.page));
-    if (params.size !== undefined) query.set("size", String(params.size));
-    if (params.name) query.set("name", params.name);
-    if (params.severity) query.set("severity", params.severity);
-    if (params.district) query.set("district", params.district);
+let mockStore: Senior[] = [...MOCK_SENIORS];
 
-    const qs = query.toString();
-    return apiClient.get<PagedResponse<Senior>>(`/api/seniors${qs ? `?${qs}` : ""}`);
-  },
+export const seniorService = {
+  list: () =>
+    USE_MOCK
+      ? Promise.resolve([...mockStore])
+      : apiClient.get<Senior[]>("/api/seniors"),
 
   get: (id: string) =>
-    apiClient.get<Senior>(`/api/seniors/${id}`),
+    USE_MOCK
+      ? Promise.resolve(mockStore.find((s) => s.id === id)!)
+      : apiClient.get<Senior>(`/api/seniors/${id}`),
 
-  create: (dto: CreateSeniorDto) =>
-    apiClient.post<Senior>("/api/seniors", dto),
+  create: (dto: CreateSeniorDto) => {
+    if (USE_MOCK) {
+      const created: Senior = { ...dto, id: String(Date.now()), registeredAt: new Date().toISOString().split("T")[0] };
+      mockStore = [created, ...mockStore];
+      return Promise.resolve(created);
+    }
+    return apiClient.post<Senior>("/api/seniors", dto);
+  },
 
-  update: (id: string, dto: UpdateSeniorDto) =>
-    apiClient.put<Senior>(`/api/seniors/${id}`, dto),
+  update: (id: string, dto: UpdateSeniorDto) => {
+    if (USE_MOCK) {
+      mockStore = mockStore.map((s) => s.id === id ? { ...s, ...dto } : s);
+      return Promise.resolve(mockStore.find((s) => s.id === id)!);
+    }
+    return apiClient.put<Senior>(`/api/seniors/${id}`, dto);
+  },
 
-  delete: (id: string) =>
-    apiClient.delete<void>(`/api/seniors/${id}`),
+  delete: (id: string) => {
+    if (USE_MOCK) {
+      mockStore = mockStore.filter((s) => s.id !== id);
+      return Promise.resolve(undefined as void);
+    }
+    return apiClient.delete<void>(`/api/seniors/${id}`);
+  },
 };

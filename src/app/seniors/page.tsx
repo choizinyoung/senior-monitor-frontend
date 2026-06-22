@@ -5,31 +5,73 @@ import { AppLayout } from "@/components/templates";
 import { TopBar, RegisterSeniorModal } from "@/components/organisms";
 import { SectionCard, DataTable } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
-import { Button, SeverityBadge, Input, Select } from "@/components/atoms";
-import { DISTRICT_OPTIONS } from "@/constants";
+import { Button, SeverityBadge, Input, Select, Spinner } from "@/components/atoms";
+import { DISTRICT_OPTIONS, SEVERITY_LABEL } from "@/constants";
+import { useSeniors } from "@/hooks/useSeniors";
+import type { Senior } from "@/types";
 
-type Senior = {
-  id: string;
-  name: string;
-  birthDate: string;
-  phone: string;
-  address: string;
-  severity: "high" | "mid" | "low";
-  communityCenter: string;
-  registeredAt: string;
-};
-
-const SENIORS: Senior[] = [
-  { id: "1", name: "김영희", birthDate: "1948.05.12", phone: "010-1234-5678", address: "서울 종로구 삼청동 12-3", severity: "high", communityCenter: "삼청동 주민센터", registeredAt: "2024.03.15" },
-  { id: "2", name: "이순자", birthDate: "1944.08.23", phone: "010-2345-6789", address: "서울 중구 을지로 45", severity: "mid", communityCenter: "을지로 주민센터", registeredAt: "2023.11.20" },
-  { id: "3", name: "박철수", birthDate: "1951.02.14", phone: "010-3456-7890", address: "서울 성동구 왕십리 78", severity: "high", communityCenter: "왕십리 주민센터", registeredAt: "2024.01.08" },
-  { id: "4", name: "최말순", birthDate: "1946.11.05", phone: "010-4567-8901", address: "서울 마포구 연남동 33", severity: "low", communityCenter: "연남동 주민센터", registeredAt: "2024.05.22" },
-  { id: "5", name: "정복순", birthDate: "1941.03.18", phone: "010-5678-9012", address: "서울 강북구 수유동 56", severity: "mid", communityCenter: "수유동 주민센터", registeredAt: "2023.09.10" },
-];
+const SEVERITY_OPTIONS_KO = ["전체", "상", "중", "하"];
+// "high"|"mid"|"low" → "상"|"중"|"하"
+const toKo = (s: string) => SEVERITY_LABEL[s] ?? s;
+// "상"|"중"|"하" → "high"|"mid"|"low"
+const SEVERITY_MAP_TO_API: Record<string, Senior["severity"]> = { "상": "high", "중": "mid", "하": "low" };
 
 export default function SeniorsPage() {
+  const {
+    seniors,
+    totalElements,
+    totalPages,
+    page,
+    setPage,
+    applyFilter,
+    isLoading,
+    error,
+    create,
+    update,
+    remove,
+  } = useSeniors();
+
+  // 검색 폼 (미적용 상태)
+  const [nameInput, setNameInput] = useState("");
+  const [severityInput, setSeverityInput] = useState("전체");
+  const [districtInput, setDistrictInput] = useState("전체");
+
+  // 모달
   const [registerOpen, setRegisterOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Senior | null>(null);
+
+  const handleSearch = () => {
+    applyFilter({
+      name: nameInput || undefined,
+      severity: severityInput !== "전체" ? severityInput : undefined,
+      district: districtInput !== "전체" ? districtInput : undefined,
+    });
+  };
+
+  const handleCreate = async (form: { name: string; birthDate: string; phone: string; severity: string; address: string; communityCenter: string; wakeWindow: string; memo: string }) => {
+    await create({
+      name: form.name,
+      birthDate: form.birthDate,
+      phone: form.phone,
+      severity: SEVERITY_MAP_TO_API[form.severity] ?? "low",
+      address: form.address,
+      communityCenter: form.communityCenter,
+      memo: form.memo,
+    });
+  };
+
+  const handleUpdate = async (form: { name: string; birthDate: string; phone: string; severity: string; address: string; communityCenter: string; wakeWindow: string; memo: string }) => {
+    if (!editTarget) return;
+    await update(editTarget.id, {
+      name: form.name,
+      birthDate: form.birthDate,
+      phone: form.phone,
+      severity: SEVERITY_MAP_TO_API[form.severity] ?? "low",
+      address: form.address,
+      communityCenter: form.communityCenter,
+      memo: form.memo,
+    });
+  };
 
   const columns: DataTableColumn<Senior>[] = [
     { key: "name", header: "이름", isTitle: true, cell: (r) => <span className="font-bold">{r.name}</span> },
@@ -52,7 +94,12 @@ export default function SeniorsPage() {
             수정
           </button>
           <button
-            onClick={(e) => e.stopPropagation()}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (confirm(`"${r.name}" 대상자를 삭제하시겠습니까?`)) {
+                await remove(r.id);
+              }
+            }}
             className="px-2 py-1 text-sm font-semibold text-danger rounded-md hover:bg-danger-light transition-colors"
           >
             삭제
@@ -74,57 +121,103 @@ export default function SeniorsPage() {
       />
 
       <SectionCard
-        title="관리 대상자 목록 (127명)"
+        title={`관리 대상자 목록 (${totalElements}명)`}
         actions={<Button onClick={() => setRegisterOpen(true)}>+ 신규 등록</Button>}
       >
         {/* 검색 바 */}
         <div className="flex items-center gap-3 px-4 sm:px-6 py-4 border-b border-border bg-[#FAFBFF] flex-wrap">
           <span className="text-sm font-semibold text-text-sub flex-shrink-0">검색:</span>
-          <Input placeholder="이름으로 검색..." className="flex-1 min-w-[150px] max-w-[240px]" />
-          <Select className="flex-1 min-w-[130px] max-w-[200px]">
-            {["중증정도: 전체", "상", "중", "하"].map((o) => <option key={o}>{o}</option>)}
+          <Input
+            placeholder="이름으로 검색..."
+            className="flex-1 min-w-[150px] max-w-[240px]"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          />
+          <Select
+            className="flex-1 min-w-[130px] max-w-[200px]"
+            value={severityInput}
+            onChange={(e) => setSeverityInput(e.target.value)}
+          >
+            {SEVERITY_OPTIONS_KO.map((o) => (
+              <option key={o} value={o}>{o === "전체" ? "중증정도: 전체" : o}</option>
+            ))}
           </Select>
-          <Select className="flex-1 min-w-[130px] max-w-[200px]">
-            {DISTRICT_OPTIONS.map((o) => <option key={o}>{o === "전체" ? "관할구역: 전체" : o}</option>)}
+          <Select
+            className="flex-1 min-w-[130px] max-w-[200px]"
+            value={districtInput}
+            onChange={(e) => setDistrictInput(e.target.value)}
+          >
+            {DISTRICT_OPTIONS.map((o) => (
+              <option key={o} value={o}>{o === "전체" ? "관할구역: 전체" : o}</option>
+            ))}
           </Select>
-          <Button variant="outline" size="sm">검색</Button>
+          <Button variant="outline" size="sm" onClick={handleSearch}>검색</Button>
         </div>
 
-        <DataTable
-          columns={columns}
-          rows={SENIORS}
-          rowKey={(r) => r.id}
-        />
+        {/* 로딩 / 에러 / 데이터 */}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-16">
+            <Spinner />
+          </div>
+        ) : error ? (
+          <div className="flex justify-center items-center py-16 text-danger text-sm font-medium">
+            {error}
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={seniors}
+            rowKey={(r) => r.id}
+          />
+        )}
 
         {/* 페이지네이션 */}
-        <div className="flex justify-center items-center gap-1 py-5">
-          {[1, 2, 3, "...", 13].map((p, i) => (
-            <button
-              key={i}
-              className={`w-8 h-8 rounded-lg border-[1.5px] text-sm font-semibold transition-all ${
-                p === 1
-                  ? "bg-primary text-white border-primary"
-                  : "bg-white text-text-sub border-border hover:bg-bg-main hover:text-text-main"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        {!isLoading && !error && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-1 py-5">
+            {Array.from({ length: totalPages }, (_, i) => i).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded-lg border-[1.5px] text-sm font-semibold transition-all ${
+                  p === page
+                    ? "bg-primary text-white border-primary"
+                    : "bg-white text-text-sub border-border hover:bg-bg-main hover:text-text-main"
+                }`}
+              >
+                {p + 1}
+              </button>
+            ))}
+          </div>
+        )}
       </SectionCard>
 
       <RegisterSeniorModal
         isOpen={registerOpen}
         onClose={() => setRegisterOpen(false)}
         mode="register"
-        onSave={() => alert("등록 완료! DB에 저장되었습니다.")}
+        onSave={async (form) => {
+          await handleCreate(form);
+          setRegisterOpen(false);
+        }}
       />
       <RegisterSeniorModal
         isOpen={!!editTarget}
         onClose={() => setEditTarget(null)}
         mode="edit"
-        initialData={editTarget ? { name: editTarget.name } : undefined}
-        onSave={() => alert("수정 완료! DB에 저장되었습니다.")}
+        initialData={editTarget ? {
+          name: editTarget.name,
+          birthDate: editTarget.birthDate,
+          phone: editTarget.phone,
+          severity: toKo(editTarget.severity),
+          address: editTarget.address,
+          communityCenter: editTarget.communityCenter,
+          memo: editTarget.memo ?? "",
+        } : undefined}
+        onSave={async (form) => {
+          await handleUpdate(form);
+          setEditTarget(null);
+        }}
       />
     </AppLayout>
   );
