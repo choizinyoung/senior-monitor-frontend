@@ -162,7 +162,7 @@ export default function SeniorsPage() {
         onClose={() => setRegisterOpen(false)}
         mode="register"
         onSave={async (form) => {
-          await create({ deviceId: "", name: form.name, age: 0, phone: form.phone, city: form.city, gu: form.gu, dong: form.dong });
+          await create({ deviceId: "", name: form.name, age: Number(form.age), phone: form.phone, city: form.city, gu: form.gu, dong: form.dong });
           setRegisterOpen(false);
         }}
       />
@@ -172,6 +172,7 @@ export default function SeniorsPage() {
         mode="edit"
         initialData={editTarget ? {
           name: editTarget.name,
+          age: String(editTarget.age),
           phone: editTarget.phone,
           city: editTarget.city,
           gu: editTarget.gu,
@@ -179,7 +180,7 @@ export default function SeniorsPage() {
         } : undefined}
         onSave={async (form) => {
           if (!editTarget) return;
-          await update(editTarget.id, { name: form.name, phone: form.phone, city: form.city, gu: form.gu, dong: form.dong });
+          await update(editTarget.id, { name: form.name, age: Number(form.age), phone: form.phone, city: form.city, gu: form.gu, dong: form.dong });
           setEditTarget(null);
         }}
       />

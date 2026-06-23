@@ -6,6 +6,7 @@ import { RegionSelector } from "@/components/molecules";
 
 export interface SeniorForm {
   name: string;
+  age: string;
   phone: string;
   city: string;
   gu: string;
@@ -20,7 +21,19 @@ interface RegisterSeniorModalProps {
   mode?: "register" | "edit";
 }
 
-const EMPTY: SeniorForm = { name: "", phone: "", city: "", gu: "", dong: "" };
+const EMPTY: SeniorForm = { name: "", age: "", phone: "", city: "", gu: "", dong: "" };
+
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 11);
+  if (digits.startsWith("02")) {
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
 
 export default function RegisterSeniorModal({
   isOpen, onClose, onSave, initialData, mode = "register",
@@ -46,14 +59,23 @@ export default function RegisterSeniorModal({
       }
     >
       <div className="flex flex-col gap-3.5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <div>
             <Label required>이름</Label>
             <Input placeholder="홍길동" value={form.name} onChange={setField("name")} />
           </div>
           <div>
+            <Label required>나이</Label>
+            <Input type="number" min={0} max={120} placeholder="78" value={form.age} onChange={setField("age")} />
+          </div>
+          <div>
             <Label required>연락처</Label>
-            <Input type="tel" placeholder="010-0000-0000" value={form.phone} onChange={setField("phone")} />
+            <Input
+              type="tel"
+              placeholder="010-0000-0000"
+              value={form.phone}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))}
+            />
           </div>
         </div>
         <div>
