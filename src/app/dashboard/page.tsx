@@ -1,72 +1,188 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { AppLayout } from "@/components/templates";
 import { TopBar } from "@/components/organisms";
 import { SeniorDetailModal, ConfirmProcessModal } from "@/components/organisms";
 import { StatCard, SectionCard, DataTable } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
-import { Button, SeverityBadge, StatusBadge } from "@/components/atoms";
+import { Button, SeverityBadge, StatusBadge, Spinner } from "@/components/atoms";
 import { ROUTES } from "@/constants";
+import type { SeverityLevel } from "@/types";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+
+type Stats = {
+  totalSeniors: number;
+  alertCount: number;
+  confirmedTodayCount: number;
+};
 
 type AlertRow = {
-  id: string;
+  id: number;
   name: string;
-  age: string;
+  age: number;
   phone: string;
   city: string;
   gu: string;
   dong: string;
-  severity: "high" | "mid" | "low";
+  severity: SeverityLevel;
+  status: string;
   registeredAt: string;
 };
 
-const ALERT_ROWS: AlertRow[] = [
-  { id: "1", name: "김영희", age: "78세", phone: "010-1234-5678", city: "서울", gu: "종로구", dong: "삼청동", severity: "high", registeredAt: "2024.03.15" },
-  { id: "2", name: "이순자", age: "82세", phone: "010-2345-6789", city: "서울", gu: "중구",   dong: "을지로", severity: "mid",  registeredAt: "2023.11.20" },
-  { id: "3", name: "박철수", age: "75세", phone: "010-3456-7890", city: "서울", gu: "성동구", dong: "왕십리", severity: "high", registeredAt: "2024.01.08" },
-];
-
-const COLUMNS: DataTableColumn<AlertRow>[] = [
-  { key: "name", header: "이름", isTitle: true, cell: (r) => <span className="font-bold">{r.name}</span> },
-  { key: "age", header: "나이", cell: (r) => r.age },
-  { key: "phone", header: "연락처", cell: (r) => r.phone, hideOnMobile: true },
-  { key: "location", header: "관할지역", cell: (r) => `${r.city} ${r.gu} ${r.dong}`, hideOnMobile: true },
-  { key: "severity", header: "중증정도", cell: (r) => <SeverityBadge level={r.severity} /> },
-  { key: "registeredAt", header: "등록일", cell: (r) => r.registeredAt, hideOnMobile: true },
-  { key: "status", header: "상태", cell: () => <StatusBadge status="danger" /> },
-];
-
 export default function DashboardPage() {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [alertRows, setAlertRows] = useState<AlertRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [detailOpen, setDetailOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const fetchDashboard = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [statsRes, alertsRes] = await Promise.all([
+        fetch(`${API_URL}/api/dashboard/stats`),
+        fetch(`${API_URL}/alerts`),
+      ]);
+
+      if (statsRes.ok) {
+        const statsJson = await statsRes.json();
+        setStats(statsJson.data ?? statsJson);
+      }
+
+      if (alertsRes.ok) {
+        const alertsJson: AlertRow[] = await alertsRes.json();
+        setAlertRows(alertsJson.slice(0, 5));
+      }
+    } catch {
+      /* 에러 시 기본값 유지 */
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 (${["일", "월", "화", "수", "목", "금", "토"][today.getDay()]})`;
+
+  const columns: DataTableColumn<AlertRow>[] = [
+    {
+      key: "name",
+      header: "이름",
+      isTitle: true,
+      cell: (r) => <span className="font-bold">{r.name}</span>,
+    },
+    { key: "age", header: "나이", cell: (r) => `${r.age}세` },
+    {
+      key: "phone",
+      header: "연락처",
+      cell: (r) => r.phone,
+      hideOnMobile: true,
+    },
+    {
+      key: "location",
+      header: "관할지역",
+      cell: (r) => `${r.gu} ${r.dong}`,
+      hideOnMobile: true,
+    },
+    {
+      key: "severity",
+      header: "중증정도",
+      cell: (r) => <SeverityBadge level={r.severity} />,
+    },
+    {
+      key: "registeredAt",
+      header: "등록일",
+      cell: (r) => r.registeredAt,
+      hideOnMobile: true,
+    },
+    {
+      key: "status",
+      header: "상태",
+      cell: () => <StatusBadge status="danger" />,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <TopBar title="통합 대시보드" />
+        <div className="flex items-center justify-center py-20">
+          <Spinner />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <TopBar
         title="통합 대시보드"
-        right={<span className="text-sm text-text-sub">2026년 6월 11일 (수) · 오전 5시~10시 기상 신호 기준</span>}
+        right={
+          <span className="text-sm text-text-sub">
+            {dateStr} · 오전 5시~10시 기상 신호 기준
+          </span>
+        }
       />
 
-      {/* 통계 카드 — 모바일 1열 → sm 2열 → xl 4열 */}
+      {/* 통계 카드 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="전체 관리 대상자" value={127} sub="활성 관리 중" />
-        <StatCard label="확인요망" value={5} sub="기상 신호 미수신 · 클릭하여 리스트 확인" valueColor="red" href={ROUTES.ALERT_LIST} />
-        <StatCard label="오늘 확인완료" value={3} sub="확인요망 → 확인완료 처리 건수" valueColor="blue" />
+        <StatCard
+          label="전체 관리 대상자"
+          value={stats?.totalSeniors ?? 0}
+          sub="활성 관리 중"
+        />
+        <StatCard
+          label="확인요망"
+          value={stats?.alertCount ?? 0}
+          sub="기상 신호 미수신 · 클릭하여 리스트 확인"
+          valueColor="red"
+          href={ROUTES.ALERT_LIST}
+        />
+        <StatCard
+          label="오늘 확인완료"
+          value={stats?.confirmedTodayCount ?? 0}
+          sub="확인요망 → 확인완료 처리 건수"
+          valueColor="blue"
+        />
         <StatCard label="응급 호출" value={0} sub="금일 발생 건수" />
       </div>
 
       {/* 확인요망 테이블 */}
       <SectionCard
         title="확인요망 대상자 (최근)"
-        titleIcon={<svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>}
-        actions={<Link href={ROUTES.ALERT_LIST}><Button variant="outline" size="sm">전체 보기 →</Button></Link>}
+        titleIcon={
+          <svg
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+        }
+        actions={
+          <Link href={ROUTES.ALERT_LIST}>
+            <Button variant="outline" size="sm">
+              전체 보기 →
+            </Button>
+          </Link>
+        }
       >
         <DataTable
-          columns={COLUMNS}
-          rows={ALERT_ROWS}
-          rowKey={(r) => r.id}
+          columns={columns}
+          rows={alertRows}
+          rowKey={(r) => String(r.id)}
           onRowClick={() => setDetailOpen(true)}
         />
       </SectionCard>
@@ -75,8 +191,13 @@ export default function DashboardPage() {
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         senior={null}
-        onConfirm={() => { setDetailOpen(false); setConfirmOpen(true); }}
-        onEmergency={() => alert("응급 호출 완료\n\n관할 기관에 응급 호출이 전송되었습니다.")}
+        onConfirm={() => {
+          setDetailOpen(false);
+          setConfirmOpen(true);
+        }}
+        onEmergency={() =>
+          alert("응급 호출 완료\n\n관할 기관에 응급 호출이 전송되었습니다.")
+        }
       />
       <ConfirmProcessModal
         isOpen={confirmOpen}
