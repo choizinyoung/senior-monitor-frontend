@@ -3,84 +3,59 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/templates";
 import { TopBar, RegisterSeniorModal } from "@/components/organisms";
-import { SectionCard, DataTable } from "@/components/molecules";
+import { SectionCard, DataTable, RegionSelector } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
-import { Button, SeverityBadge, Input, Select, Spinner } from "@/components/atoms";
-import { DISTRICT_OPTIONS, SEVERITY_LABEL } from "@/constants";
+import { Button, StatusBadge, Input, Select, Spinner } from "@/components/atoms";
+import { SENIOR_STATUS_OPTIONS } from "@/constants";
 import { useSeniors } from "@/hooks/useSeniors";
-import type { Senior } from "@/types";
+import type { ApiSenior, SeniorStatusType } from "@/types";
 
-const SEVERITY_OPTIONS_KO = ["전체", "상", "중", "하"];
-// "high"|"mid"|"low" → "상"|"중"|"하"
-const toKo = (s: string) => SEVERITY_LABEL[s] ?? s;
-// "상"|"중"|"하" → "high"|"mid"|"low"
-const SEVERITY_MAP_TO_API: Record<string, Senior["severity"]> = { "상": "high", "중": "mid", "하": "low" };
+const STATUS_BADGE_MAP: Record<SeniorStatusType, "danger" | "success" | "warning" | "info"> = {
+  "정상":       "success",
+  "확인요망":    "danger",
+  "확인완료":    "info",
+  "확인요망유지": "warning",
+  "응급호출":    "danger",
+};
+
+function formatDate(iso: string) {
+  return iso.split("T")[0];
+}
 
 export default function SeniorsPage() {
   const {
-    seniors,
-    totalElements,
-    totalPages,
-    page,
-    setPage,
-    applyFilter,
-    isLoading,
-    error,
-    create,
-    update,
-    remove,
+    seniors, totalElements, totalPages, page,
+    setPage, applyFilter, isLoading, error,
+    create, update, remove,
   } = useSeniors();
 
-  // 검색 폼 (미적용 상태)
-  const [nameInput, setNameInput] = useState("");
-  const [severityInput, setSeverityInput] = useState("전체");
-  const [districtInput, setDistrictInput] = useState("전체");
+  const [nameInput,   setNameInput]   = useState("");
+  const [statusInput, setStatusInput] = useState("전체");
+  const [cityInput,   setCityInput]   = useState("전체");
+  const [guInput,     setGuInput]     = useState("전체");
+  const [dongInput,   setDongInput]   = useState("전체");
 
-  // 모달
   const [registerOpen, setRegisterOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Senior | null>(null);
+  const [editTarget,   setEditTarget]   = useState<ApiSenior | null>(null);
 
   const handleSearch = () => {
     applyFilter({
-      name: nameInput || undefined,
-      severity: severityInput !== "전체" ? severityInput : undefined,
-      district: districtInput !== "전체" ? districtInput : undefined,
+      name:   nameInput   || undefined,
+      status: statusInput !== "전체" ? statusInput : undefined,
+      city:   cityInput   !== "전체" ? cityInput   : undefined,
+      gu:     guInput     !== "전체" ? guInput     : undefined,
+      dong:   dongInput   !== "전체" ? dongInput   : undefined,
     });
   };
 
-  const handleCreate = async (form: { name: string; birthDate: string; phone: string; severity: string; address: string; communityCenter: string; wakeWindow: string; memo: string }) => {
-    await create({
-      name: form.name,
-      birthDate: form.birthDate,
-      phone: form.phone,
-      severity: SEVERITY_MAP_TO_API[form.severity] ?? "low",
-      address: form.address,
-      communityCenter: form.communityCenter,
-      memo: form.memo,
-    });
-  };
-
-  const handleUpdate = async (form: { name: string; birthDate: string; phone: string; severity: string; address: string; communityCenter: string; wakeWindow: string; memo: string }) => {
-    if (!editTarget) return;
-    await update(editTarget.id, {
-      name: form.name,
-      birthDate: form.birthDate,
-      phone: form.phone,
-      severity: SEVERITY_MAP_TO_API[form.severity] ?? "low",
-      address: form.address,
-      communityCenter: form.communityCenter,
-      memo: form.memo,
-    });
-  };
-
-  const columns: DataTableColumn<Senior>[] = [
-    { key: "name", header: "이름", isTitle: true, cell: (r) => <span className="font-bold">{r.name}</span> },
-    { key: "birthDate", header: "생년월일", cell: (r) => r.birthDate, hideOnMobile: true },
-    { key: "phone", header: "연락처", cell: (r) => r.phone },
-    { key: "address", header: "주소", cell: (r) => r.address, hideOnMobile: true },
-    { key: "severity", header: "중증도", cell: (r) => <SeverityBadge level={r.severity} /> },
-    { key: "communityCenter", header: "담당 주민센터", cell: (r) => r.communityCenter, hideOnMobile: true },
-    { key: "registeredAt", header: "등록일", cell: (r) => r.registeredAt, hideOnMobile: true },
+  const columns: DataTableColumn<ApiSenior>[] = [
+    { key: "name",        header: "이름",       isTitle: true, cell: (r) => <span className="font-bold">{r.name}</span> },
+    { key: "age",         header: "나이",       cell: (r) => `${r.age}세` },
+    { key: "phone",       header: "연락처",     cell: (r) => r.phone },
+    { key: "location",    header: "관할지역",    cell: (r) => `${r.city} ${r.gu} ${r.dong}`, hideOnMobile: true },
+    { key: "deviceId",    header: "디바이스 ID", cell: (r) => r.deviceId, hideOnMobile: true },
+    { key: "status",      header: "상태",       cell: (r) => <StatusBadge status={STATUS_BADGE_MAP[r.status]} label={r.status} /> },
+    { key: "registeredAt",header: "등록일",     cell: (r) => formatDate(r.registeredAt), hideOnMobile: true },
     {
       key: "actions",
       header: "관리",
@@ -136,43 +111,33 @@ export default function SeniorsPage() {
           />
           <Select
             className="flex-1 min-w-[130px] max-w-[200px]"
-            value={severityInput}
-            onChange={(e) => setSeverityInput(e.target.value)}
+            value={statusInput}
+            onChange={(e) => setStatusInput(e.target.value)}
           >
-            {SEVERITY_OPTIONS_KO.map((o) => (
-              <option key={o} value={o}>{o === "전체" ? "중증정도: 전체" : o}</option>
-            ))}
+            <option value="전체">상태: 전체</option>
+            {SENIOR_STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
           </Select>
-          <Select
-            className="flex-1 min-w-[130px] max-w-[200px]"
-            value={districtInput}
-            onChange={(e) => setDistrictInput(e.target.value)}
-          >
-            {DISTRICT_OPTIONS.map((o) => (
-              <option key={o} value={o}>{o === "전체" ? "관할구역: 전체" : o}</option>
-            ))}
-          </Select>
+          <RegionSelector
+            city={cityInput}
+            gu={guInput}
+            dong={dongInput}
+            onCityChange={setCityInput}
+            onGuChange={setGuInput}
+            onDongChange={setDongInput}
+            showAll
+            className="flex-1 min-w-[380px]"
+          />
           <Button variant="outline" size="sm" onClick={handleSearch}>검색</Button>
         </div>
 
-        {/* 로딩 / 에러 / 데이터 */}
         {isLoading ? (
-          <div className="flex justify-center items-center py-16">
-            <Spinner />
-          </div>
+          <div className="flex justify-center items-center py-16"><Spinner /></div>
         ) : error ? (
-          <div className="flex justify-center items-center py-16 text-danger text-sm font-medium">
-            {error}
-          </div>
+          <div className="flex justify-center items-center py-16 text-danger text-sm font-medium">{error}</div>
         ) : (
-          <DataTable
-            columns={columns}
-            rows={seniors}
-            rowKey={(r) => r.id}
-          />
+          <DataTable columns={columns} rows={seniors} rowKey={(r) => String(r.id)} />
         )}
 
-        {/* 페이지네이션 */}
         {!isLoading && !error && totalPages > 1 && (
           <div className="flex justify-center items-center gap-1 py-5">
             {Array.from({ length: totalPages }, (_, i) => i).map((p) => (
@@ -197,7 +162,7 @@ export default function SeniorsPage() {
         onClose={() => setRegisterOpen(false)}
         mode="register"
         onSave={async (form) => {
-          await handleCreate(form);
+          await create({ deviceId: "", name: form.name, age: 0, phone: form.phone, city: form.city, gu: form.gu, dong: form.dong });
           setRegisterOpen(false);
         }}
       />
@@ -207,15 +172,14 @@ export default function SeniorsPage() {
         mode="edit"
         initialData={editTarget ? {
           name: editTarget.name,
-          birthDate: editTarget.birthDate,
           phone: editTarget.phone,
-          severity: toKo(editTarget.severity),
-          address: editTarget.address,
-          communityCenter: editTarget.communityCenter,
-          memo: editTarget.memo ?? "",
+          city: editTarget.city,
+          gu: editTarget.gu,
+          dong: editTarget.dong,
         } : undefined}
         onSave={async (form) => {
-          await handleUpdate(form);
+          if (!editTarget) return;
+          await update(editTarget.id, { name: form.name, phone: form.phone, city: form.city, gu: form.gu, dong: form.dong });
           setEditTarget(null);
         }}
       />

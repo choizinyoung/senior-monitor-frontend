@@ -2,19 +2,21 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { seniorService } from "@/services";
-import type { Senior } from "@/types";
+import type { ApiSenior } from "@/types";
 import type { CreateSeniorDto, UpdateSeniorDto } from "@/services";
 
 const PAGE_SIZE = 10;
 
 export interface SeniorFilter {
   name?: string;
-  severity?: string;
-  district?: string;
+  status?: string;
+  city?: string;
+  gu?: string;
+  dong?: string;
 }
 
 export function useSeniors() {
-  const [allSeniors, setAllSeniors] = useState<Senior[]>([]);
+  const [allSeniors, setAllSeniors] = useState<ApiSenior[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,9 +27,7 @@ export function useSeniors() {
     setIsLoading(true);
     setError(null);
     try {
-      const raw = await seniorService.list();
-      // 백엔드가 배열 대신 페이지 객체를 반환할 경우 대비
-      const data = Array.isArray(raw) ? raw : (raw as { content?: typeof raw })?.content ?? [];
+      const data = await seniorService.list();
       setAllSeniors(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "데이터를 불러오지 못했습니다.");
@@ -38,23 +38,17 @@ export function useSeniors() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // "상"|"중"|"하" → "high"|"mid"|"low"
-  const SEVERITY_MAP: Record<string, string> = { "상": "high", "중": "mid", "하": "low" };
-
-  // 클라이언트 필터링
   const filtered = useMemo(() => {
     return allSeniors.filter((s) => {
-      if (filter.name && !s.name.includes(filter.name)) return false;
-      if (filter.severity && filter.severity !== "전체") {
-        const mapped = SEVERITY_MAP[filter.severity] ?? filter.severity;
-        if (s.severity !== mapped) return false;
-      }
-      if (filter.district && filter.district !== "전체" && !s.address.includes(filter.district)) return false;
+      if (filter.name   && !s.name.includes(filter.name)) return false;
+      if (filter.status && s.status !== filter.status) return false;
+      if (filter.city   && s.city !== filter.city) return false;
+      if (filter.gu     && s.gu   !== filter.gu)   return false;
+      if (filter.dong   && s.dong !== filter.dong) return false;
       return true;
     });
   }, [allSeniors, filter]);
 
-  // 클라이언트 페이지네이션
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const seniors = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -69,13 +63,13 @@ export function useSeniors() {
     return created;
   };
 
-  const update = async (id: string, dto: UpdateSeniorDto) => {
+  const update = async (id: number, dto: UpdateSeniorDto) => {
     const updated = await seniorService.update(id, dto);
     await fetchAll();
     return updated;
   };
 
-  const remove = async (id: string) => {
+  const remove = async (id: number) => {
     await seniorService.delete(id);
     await fetchAll();
   };

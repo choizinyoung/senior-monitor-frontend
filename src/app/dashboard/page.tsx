@@ -15,22 +15,24 @@ type AlertRow = {
   name: string;
   age: string;
   phone: string;
-  address: string;
+  city: string;
+  gu: string;
+  dong: string;
   severity: "high" | "mid" | "low";
   registeredAt: string;
 };
 
 const ALERT_ROWS: AlertRow[] = [
-  { id: "1", name: "김영희", age: "78세", phone: "010-1234-5678", address: "서울 종로구 삼청동 12-3", severity: "high", registeredAt: "2024.03.15" },
-  { id: "2", name: "이순자", age: "82세", phone: "010-2345-6789", address: "서울 중구 을지로 45", severity: "mid", registeredAt: "2023.11.20" },
-  { id: "3", name: "박철수", age: "75세", phone: "010-3456-7890", address: "서울 성동구 왕십리 78", severity: "high", registeredAt: "2024.01.08" },
+  { id: "1", name: "김영희", age: "78세", phone: "010-1234-5678", city: "서울", gu: "종로구", dong: "삼청동", severity: "high", registeredAt: "2024.03.15" },
+  { id: "2", name: "이순자", age: "82세", phone: "010-2345-6789", city: "서울", gu: "중구",   dong: "을지로", severity: "mid",  registeredAt: "2023.11.20" },
+  { id: "3", name: "박철수", age: "75세", phone: "010-3456-7890", city: "서울", gu: "성동구", dong: "왕십리", severity: "high", registeredAt: "2024.01.08" },
 ];
 
 const COLUMNS: DataTableColumn<AlertRow>[] = [
   { key: "name", header: "이름", isTitle: true, cell: (r) => <span className="font-bold">{r.name}</span> },
   { key: "age", header: "나이", cell: (r) => r.age },
   { key: "phone", header: "연락처", cell: (r) => r.phone, hideOnMobile: true },
-  { key: "address", header: "주소", cell: (r) => r.address, hideOnMobile: true },
+  { key: "location", header: "관할지역", cell: (r) => `${r.city} ${r.gu} ${r.dong}`, hideOnMobile: true },
   { key: "severity", header: "중증정도", cell: (r) => <SeverityBadge level={r.severity} /> },
   { key: "registeredAt", header: "등록일", cell: (r) => r.registeredAt, hideOnMobile: true },
   { key: "status", header: "상태", cell: () => <StatusBadge status="danger" /> },

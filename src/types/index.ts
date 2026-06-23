@@ -3,18 +3,56 @@ export type SeniorStatus = "normal" | "warning" | "danger" | "offline";
 export type AlertStatus = "danger" | "success" | "warning" | "info";
 export type LogType = "query" | "action" | "system" | "login";
 
-export interface Senior {
-  id: string;
+/** ERD SENIOR.status */
+export type SeniorStatusType = "정상" | "확인요망" | "확인완료" | "확인요망유지" | "응급호출";
+
+/** ERD CONTACT_HISTORY.result_status */
+export type ResultStatusType = "확인완료" | "확인요망유지" | "응급호출";
+
+/** 백엔드 공통 응답 래퍼 */
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+/** 백엔드 GET /api/seniors 단건 형태 (ERD v3 — address → city/gu/dong 분리) */
+export interface ApiSenior {
+  id: number;
+  deviceId: string;
   name: string;
-  birthDate: string;
+  age: number;
   phone: string;
-  address: string;
-  severity: SeverityLevel;
-  communityCenter: string;
+  city: string;    // 시/도 (예: 서울)
+  gu: string;      // 구/군 (예: 노원구)
+  dong: string;    // 동 (예: 상계동)
+  status: SeniorStatusType;
+  isDeleted: "Y" | "N";
   registeredAt: string;
-  wakeWindowStart?: string;
-  wakeWindowEnd?: string;
+  updatedAt: string;
+}
+
+/** ERD CONTACT_HISTORY */
+export interface ContactHistory {
+  id: number;
+  seniorId: number;
+  managerName: string;
+  resultStatus: ResultStatusType;
   memo?: string;
+  contactedAt: string;
+  createdAt: string;
+}
+
+export interface SeniorDetail {
+  id: number;
+  name: string;
+  age: number;
+  phone: string;
+  city: string;
+  gu: string;
+  dong: string;
+  status: SeniorStatusType;
+  registeredAt: string;
+  contacts: ContactHistory[];
 }
 
 export interface AlertTarget {
@@ -29,23 +67,10 @@ export interface AlertTarget {
   lastWakeSignal?: string;
 }
 
-export interface ContactHistory {
-  id: string;
-  date: string;
-  type: string;
-  memo?: string;
-  note?: string;
-}
-
-export interface SeniorDetail extends AlertTarget {
-  communityCenter: string;
-  contacts: ContactHistory[];
-}
-
 export interface ConfirmForm {
   date: string;
   time: string;
-  processStatus: "확인완료" | "확인요망 유지" | "응급 이관";
+  processStatus: ResultStatusType;
   memo: string;
 }
 
@@ -72,4 +97,12 @@ export interface StatCard {
   valueColor?: "default" | "red" | "blue" | "green";
   clickable?: boolean;
   href?: string;
+}
+
+/** ERD SIGNAL_LOG */
+export interface SignalLog {
+  id: number;
+  seniorId: number;
+  receivedAt: string;
+  signalDate: string;
 }

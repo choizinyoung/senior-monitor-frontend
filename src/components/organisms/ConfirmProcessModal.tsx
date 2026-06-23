@@ -14,7 +14,7 @@ interface ConfirmProcessModalProps {
 interface ConfirmData {
   date: string;
   time: string;
-  processStatus: string;
+  processStatus: "확인완료" | "확인요망유지" | "응급호출";
   memo: string;
 }
 

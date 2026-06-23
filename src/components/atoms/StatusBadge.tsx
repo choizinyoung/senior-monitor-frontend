@@ -3,6 +3,7 @@ import { AlertStatus } from "@/types";
 
 interface StatusBadgeProps {
   status: AlertStatus;
+  label?: string;
   className?: string;
 }
 
@@ -20,7 +21,7 @@ const labels: Record<AlertStatus, string> = {
   info: "● 정보",
 };
 
-export default function StatusBadge({ status, className }: StatusBadgeProps) {
+export default function StatusBadge({ status, label, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
@@ -29,7 +30,7 @@ export default function StatusBadge({ status, className }: StatusBadgeProps) {
         className
       )}
     >
-      {labels[status]}
+      ● {label ?? labels[status].replace("● ", "")}
     </span>
   );
 }

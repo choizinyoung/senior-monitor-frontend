@@ -4,3 +4,4 @@ export { default as FormField } from "./FormField";
 export { default as LogItem } from "./LogItem";
 export { default as DataTable } from "./DataTable";
 export type { DataTableColumn } from "./DataTable";
+export { default as RegionSelector } from "./RegionSelector";

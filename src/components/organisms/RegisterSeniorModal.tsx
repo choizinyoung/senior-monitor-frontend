@@ -1,8 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Button, Label, Input, Select, Textarea } from "@/components/atoms";
-import { SEVERITY_OPTIONS, WAKE_WINDOW_OPTIONS } from "@/constants";
+import { Modal, Button, Label, Input } from "@/components/atoms";
+import { RegionSelector } from "@/components/molecules";
+
+export interface SeniorForm {
+  name: string;
+  phone: string;
+  city: string;
+  gu: string;
+  dong: string;
+}
 
 interface RegisterSeniorModalProps {
   isOpen: boolean;
@@ -12,29 +20,15 @@ interface RegisterSeniorModalProps {
   mode?: "register" | "edit";
 }
 
-interface SeniorForm {
-  name: string;
-  birthDate: string;
-  phone: string;
-  severity: string;
-  address: string;
-  communityCenter: string;
-  wakeWindow: string;
-  memo: string;
-}
-
-const EMPTY: SeniorForm = {
-  name: "", birthDate: "", phone: "", severity: "",
-  address: "", communityCenter: "", wakeWindow: WAKE_WINDOW_OPTIONS[0], memo: "",
-};
+const EMPTY: SeniorForm = { name: "", phone: "", city: "", gu: "", dong: "" };
 
 export default function RegisterSeniorModal({
   isOpen, onClose, onSave, initialData, mode = "register",
 }: RegisterSeniorModalProps) {
   const [form, setForm] = useState<SeniorForm>({ ...EMPTY, ...initialData });
 
-  const set = (key: keyof SeniorForm) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+  const setField = (key: keyof SeniorForm) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
   return (
@@ -51,46 +45,27 @@ export default function RegisterSeniorModal({
         </>
       }
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <div>
-          <Label required>이름</Label>
-          <Input placeholder="홍길동" value={form.name} onChange={set("name")} />
+      <div className="flex flex-col gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <Label required>이름</Label>
+            <Input placeholder="홍길동" value={form.name} onChange={setField("name")} />
+          </div>
+          <div>
+            <Label required>연락처</Label>
+            <Input type="tel" placeholder="010-0000-0000" value={form.phone} onChange={setField("phone")} />
+          </div>
         </div>
         <div>
-          <Label required>생년월일</Label>
-          <Input type="date" value={form.birthDate} onChange={set("birthDate")} />
-        </div>
-        <div>
-          <Label required>연락처</Label>
-          <Input type="tel" placeholder="010-0000-0000" value={form.phone} onChange={set("phone")} />
-        </div>
-        <div>
-          <Label required>중증도</Label>
-          <Select value={form.severity} onChange={set("severity")}>
-            <option value="">선택</option>
-            {["상", "중", "하"].map((o) => <option key={o}>{o}</option>)}
-          </Select>
-        </div>
-        <div className="sm:col-span-2">
-          <Label required>주소</Label>
-          <Input placeholder="서울특별시 종로구 ..." value={form.address} onChange={set("address")} />
-        </div>
-        <div>
-          <Label>담당 주민센터</Label>
-          <Input placeholder="삼청동 주민센터" value={form.communityCenter} onChange={set("communityCenter")} />
-        </div>
-        <div>
-          <Label>기상 확인 시간대</Label>
-          <Select value={form.wakeWindow} onChange={set("wakeWindow")}>
-            {WAKE_WINDOW_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-          </Select>
-        </div>
-        <div className="sm:col-span-2">
-          <Label>메모</Label>
-          <Textarea
-            placeholder="대상자에 대한 특이사항을 기록해주세요..."
-            value={form.memo}
-            onChange={set("memo")}
+          <Label required>관할지역</Label>
+          <RegionSelector
+            city={form.city}
+            gu={form.gu}
+            dong={form.dong}
+            onCityChange={(v) => setForm((prev) => ({ ...prev, city: v }))}
+            onGuChange={(v) => setForm((prev) => ({ ...prev, gu: v }))}
+            onDongChange={(v) => setForm((prev) => ({ ...prev, dong: v }))}
+            showAll={false}
           />
         </div>
       </div>
