@@ -14,7 +14,14 @@ export interface CreateSeniorDto {
   dong: string;
 }
 
-export type UpdateSeniorDto = Partial<CreateSeniorDto>;
+export interface UpdateSeniorDto {
+  name?: string;
+  age?: number;
+  phone?: string;
+  city?: string;
+  gu?: string;
+  dong?: string;
+}
 
 let mockStore: ApiSenior[] = [...MOCK_SENIORS];
 
@@ -26,7 +33,7 @@ export const seniorService = {
           .get<ApiResponse<ApiSenior[]>>("/api/seniors")
           .then((res) => res.data),
 
-  get: (id: number) =>
+  get: (id: number): Promise<ApiSenior> =>
     USE_MOCK
       ? Promise.resolve(mockStore.find((s) => s.id === id)!)
       : apiClient
@@ -60,7 +67,7 @@ export const seniorService = {
       return Promise.resolve(mockStore.find((s) => s.id === id)!);
     }
     return apiClient
-      .put<ApiResponse<ApiSenior>>(`/api/seniors/${id}`, dto)
+      .post<ApiResponse<ApiSenior>>(`/api/seniors/${id}/update`, dto)
       .then((res) => res.data);
   },
 

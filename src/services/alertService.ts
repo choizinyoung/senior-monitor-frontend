@@ -1,5 +1,7 @@
 import { apiClient } from "@/lib/apiClient";
-import type { AlertTarget, ConfirmForm } from "@/types";
+import type { ApiSenior, ApiResponse, ResultStatusType } from "@/types";
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 export interface AlertListParams {
   page?: number;
@@ -8,29 +10,18 @@ export interface AlertListParams {
   district?: string;
 }
 
-export interface PagedResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  page: number;
-  size: number;
+export interface ConfirmDto {
+  managerName: string;
+  resultStatus: ResultStatusType;
+  memo: string;
+  contactedAt: string; // ISO 8601: "2026-06-23T14:30:00"
 }
 
 export const alertService = {
-  list: (params: AlertListParams = {}) => {
-    const query = new URLSearchParams();
-    if (params.page !== undefined) query.set("page", String(params.page));
-    if (params.size !== undefined) query.set("size", String(params.size));
-    if (params.severity) query.set("severity", params.severity);
-    if (params.district) query.set("district", params.district);
-
-    const qs = query.toString();
-    return apiClient.get<PagedResponse<AlertTarget>>(`/api/alerts${qs ? `?${qs}` : ""}`);
+  confirm: (seniorId: number, dto: ConfirmDto): Promise<ApiSenior | null> => {
+    if (USE_MOCK) return Promise.resolve(null);
+    return apiClient
+      .post<ApiResponse<ApiSenior>>(`/api/alerts/${seniorId}/confirm`, dto)
+      .then((res) => res.data);
   },
-
-  get: (id: string) =>
-    apiClient.get<AlertTarget>(`/api/alerts/${id}`),
-
-  confirm: (id: string, form: ConfirmForm) =>
-    apiClient.post<void>(`/api/alerts/${id}/confirm`, form),
 };

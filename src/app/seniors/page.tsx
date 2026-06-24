@@ -8,6 +8,7 @@ import type { DataTableColumn } from "@/components/molecules";
 import { Button, StatusBadge, Input, Select, Spinner } from "@/components/atoms";
 import { SENIOR_STATUS_OPTIONS } from "@/constants";
 import { useSeniors } from "@/hooks/useSeniors";
+import { seniorService } from "@/services";
 import type { ApiSenior, SeniorStatusType } from "@/types";
 
 const STATUS_BADGE_MAP: Record<SeniorStatusType, "danger" | "success" | "warning" | "info"> = {
@@ -35,8 +36,21 @@ export default function SeniorsPage() {
   const [guInput,     setGuInput]     = useState("전체");
   const [dongInput,   setDongInput]   = useState("전체");
 
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [editTarget,   setEditTarget]   = useState<ApiSenior | null>(null);
+  const [registerOpen,  setRegisterOpen]  = useState(false);
+  const [editTarget,    setEditTarget]    = useState<ApiSenior | null>(null);
+  const [editLoadingId, setEditLoadingId] = useState<number | null>(null);
+
+  const handleEditClick = async (r: ApiSenior) => {
+    setEditLoadingId(r.id);
+    try {
+      const fresh = await seniorService.get(r.id);
+      setEditTarget(fresh);
+    } catch {
+      setEditTarget(r); // 조회 실패 시 목록 데이터로 폴백
+    } finally {
+      setEditLoadingId(null);
+    }
+  };
 
   const handleSearch = () => {
     applyFilter({
@@ -63,10 +77,11 @@ export default function SeniorsPage() {
       cell: (r) => (
         <div className="flex gap-0.5">
           <button
-            onClick={(e) => { e.stopPropagation(); setEditTarget(r); }}
-            className="px-2 py-1 text-sm font-semibold text-primary rounded-md hover:bg-primary-light transition-colors"
+            onClick={(e) => { e.stopPropagation(); handleEditClick(r); }}
+            disabled={editLoadingId === r.id}
+            className="px-2 py-1 text-sm font-semibold text-primary rounded-md hover:bg-primary-light transition-colors disabled:opacity-50"
           >
-            수정
+            {editLoadingId === r.id ? "…" : "수정"}
           </button>
           <button
             onClick={async (e) => {
