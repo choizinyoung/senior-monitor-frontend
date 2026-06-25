@@ -6,8 +6,8 @@ import { TopBar } from "@/components/organisms";
 import { SectionCard, DataTable, RegionSelector } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
 import { Button, Input, Select, StatusBadge, Spinner } from "@/components/atoms";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
+import { apiClient } from "@/lib/apiClient";
+import type { ApiResponse } from "@/types";
 
 const RESULT_STATUS_OPTIONS = ["전체", "확인완료", "확인요망유지", "응급호출"] as const;
 type ResultStatus = "확인완료" | "확인요망유지" | "응급호출";
@@ -48,10 +48,8 @@ async function loadContacts(p: SearchParams): Promise<ContactRow[]> {
   const query = new URLSearchParams();
   if (p.statusFilter !== "전체") query.set("resultStatus", p.statusFilter);
   const qs = query.toString();
-  const res = await fetch(`${API_URL}/api/contacts${qs ? `?${qs}` : ""}`);
-  if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
-  const raw = await res.json();
-  const data: ContactRow[] = Array.isArray(raw) ? raw : (raw.data ?? []);
+  const res = await apiClient.get<ApiResponse<ContactRow[]>>(`/api/contacts${qs ? `?${qs}` : ""}`);
+  const data: ContactRow[] = res.data ?? [];
 
   return data.filter((r) => {
     const day = r.contactedAt.split("T")[0];

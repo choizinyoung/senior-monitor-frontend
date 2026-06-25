@@ -7,8 +7,8 @@ import { cn } from "@/utils/cn";
 import { ROUTES } from "@/constants";
 import { Avatar } from "@/components/atoms";
 import { useMonitorStore } from "@/store/useMonitorStore";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
+import { apiClient } from "@/lib/apiClient";
+import type { ApiResponse } from "@/types";
 
 const NAV_GROUPS = [
   {
@@ -106,11 +106,8 @@ export default function SideNav() {
   }, [pathname, closeSidebar]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/dashboard/stats`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        if (json) setAlertCount(json.data?.alertCount ?? json.alertCount ?? 0);
-      })
+    apiClient.get<ApiResponse<{ alertCount: number }>>("/dashboard/stats")
+      .then((res) => setAlertCount(res.data?.alertCount ?? 0))
       .catch(() => {});
   }, [setAlertCount]);
 

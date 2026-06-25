@@ -30,14 +30,14 @@ export const seniorService = {
     USE_MOCK
       ? Promise.resolve([...mockStore])
       : apiClient
-          .get<ApiResponse<ApiSenior[]>>("/api/seniors")
+          .get<ApiResponse<ApiSenior[]>>("/seniors")
           .then((res) => res.data),
 
   get: (id: number): Promise<ApiSenior> =>
     USE_MOCK
       ? Promise.resolve(mockStore.find((s) => s.id === id)!)
       : apiClient
-          .get<ApiResponse<ApiSenior>>(`/api/seniors/${id}`)
+          .get<ApiResponse<ApiSenior>>(`/seniors/${id}`)
           .then((res) => res.data),
 
   create: (dto: CreateSeniorDto) => {
@@ -55,7 +55,7 @@ export const seniorService = {
       return Promise.resolve(created);
     }
     return apiClient
-      .post<ApiResponse<ApiSenior>>("/api/seniors", dto)
+      .post<ApiResponse<ApiSenior>>("/seniors", dto)
       .then((res) => res.data);
   },
 
@@ -67,7 +67,7 @@ export const seniorService = {
       return Promise.resolve(mockStore.find((s) => s.id === id)!);
     }
     return apiClient
-      .post<ApiResponse<ApiSenior>>(`/api/seniors/${id}/update`, dto)
+      .post<ApiResponse<ApiSenior>>(`/seniors/${id}/update`, dto)
       .then((res) => res.data);
   },
 
@@ -76,6 +76,6 @@ export const seniorService = {
       mockStore = mockStore.filter((s) => s.id !== id);
       return Promise.resolve(undefined as void);
     }
-    return apiClient.delete<void>(`/api/seniors/${id}`);
+    return apiClient.delete<void>(`/seniors/${id}`);
   },
 };

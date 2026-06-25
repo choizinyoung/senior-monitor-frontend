@@ -10,10 +10,9 @@ import type { DataTableColumn } from "@/components/molecules";
 import { Button, SeverityBadge, StatusBadge, Spinner } from "@/components/atoms";
 import { ROUTES } from "@/constants";
 import { alertService } from "@/services";
-import type { SeverityLevel, SeniorDetail } from "@/types";
+import { apiClient } from "@/lib/apiClient";
+import type { SeverityLevel, SeniorDetail, ApiResponse } from "@/types";
 import { useMonitorStore } from "@/store/useMonitorStore";
-
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 type Stats = {
   totalSeniors: number;
@@ -38,20 +37,13 @@ type AlertRow = {
 async function loadDashboardData(): Promise<{ stats: Stats | null; alerts: AlertRow[] }> {
   try {
     const [statsRes, alertsRes] = await Promise.all([
-      fetch(`${API_URL}/api/dashboard/stats`),
-      fetch(`${API_URL}/alerts`),
+      apiClient.get<ApiResponse<Stats>>("/dashboard/stats"),
+      apiClient.get<ApiResponse<AlertRow[]>>("/alerts"),
     ]);
-    let stats: Stats | null = null;
-    let alerts: AlertRow[] = [];
-    if (statsRes.ok) {
-      const json = await statsRes.json();
-      stats = json.data ?? json;
-    }
-    if (alertsRes.ok) {
-      const json: AlertRow[] = await alertsRes.json();
-      alerts = json.slice(0, 5);
-    }
-    return { stats, alerts };
+    return {
+      stats: statsRes.data ?? null,
+      alerts: (alertsRes.data ?? []).slice(0, 5),
+    };
   } catch {
     return { stats: null, alerts: [] };
   }

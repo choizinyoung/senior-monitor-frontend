@@ -18,9 +18,8 @@ import {
 } from "@/components/atoms";
 import { GU_OPTIONS, DONG_BY_GU } from "@/constants";
 import { alertService } from "@/services";
-import type { SeverityLevel, SeniorDetail } from "@/types";
-
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+import { apiClient } from "@/lib/apiClient";
+import type { SeverityLevel, SeniorDetail, ApiResponse } from "@/types";
 
 const SEVERITY_FILTER_MAP: Record<string, string> = {
   "중증정도: 전체": "",
@@ -48,9 +47,8 @@ async function fetchAlertsData(severityFilter: string, guFilter: string, dongFil
   if (guFilter) params.set("gu", guFilter);
   if (dongFilter) params.set("dong", dongFilter);
   const query = params.toString();
-  const res = await fetch(`${API_URL}/alerts${query ? `?${query}` : ""}`);
-  if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
-  return res.json();
+  const res = await apiClient.get<ApiResponse<AlertRow[]>>(`/alerts${query ? `?${query}` : ""}`);
+  return res.data ?? [];
 }
 
 export default function AlertListPage() {

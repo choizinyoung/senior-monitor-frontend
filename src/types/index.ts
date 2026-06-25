@@ -15,7 +15,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-/** 백엔드 GET /api/seniors 단건 형태 (ERD v3 — address → city/gu/dong 분리) */
+/** 백엔드 GET /seniors 단건 형태 (ERD v3 — address → city/gu/dong 분리) */
 export interface ApiSenior {
   id: number;
   deviceId: string;

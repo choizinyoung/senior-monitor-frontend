@@ -23,14 +23,14 @@ export const alertService = {
 
     const qs = query.toString();
     return apiClient
-      .get<ApiResponse<unknown>>(`/api/alerts${qs ? `?${qs}` : ""}`)
+      .get<ApiResponse<unknown>>(`/alerts${qs ? `?${qs}` : ""}`)
       .then((res) => res.data);
   },
 
   getDetail: async (seniorId: number): Promise<SeniorDetail> => {
     const [seniorRes, contactsRes] = await Promise.all([
-      apiClient.get<ApiResponse<ApiSenior>>(`/api/seniors/${seniorId}`),
-      apiClient.get<ApiResponse<ContactHistory[]>>(`/api/seniors/${seniorId}/contacts`),
+      apiClient.get<ApiResponse<ApiSenior>>(`/seniors/${seniorId}`),
+      apiClient.get<ApiResponse<ContactHistory[]>>(`/seniors/${seniorId}/contacts`),
     ]);
 
     const s = seniorRes.data;
