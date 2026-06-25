@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppLayout } from "@/components/templates";
 import { TopBar } from "@/components/organisms";
@@ -34,6 +34,28 @@ type AlertRow = {
   registeredAt: string;
 };
 
+async function loadDashboardData(): Promise<{ stats: Stats | null; alerts: AlertRow[] }> {
+  try {
+    const [statsRes, alertsRes] = await Promise.all([
+      fetch(`${API_URL}/api/dashboard/stats`),
+      fetch(`${API_URL}/alerts`),
+    ]);
+    let stats: Stats | null = null;
+    let alerts: AlertRow[] = [];
+    if (statsRes.ok) {
+      const json = await statsRes.json();
+      stats = json.data ?? json;
+    }
+    if (alertsRes.ok) {
+      const json: AlertRow[] = await alertsRes.json();
+      alerts = json.slice(0, 5);
+    }
+    return { stats, alerts };
+  } catch {
+    return { stats: null, alerts: [] };
+  }
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [alertRows, setAlertRows] = useState<AlertRow[]>([]);
@@ -46,33 +68,13 @@ export default function DashboardPage() {
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
   const [confirmTargetName, setConfirmTargetName] = useState("");
 
-  const fetchDashboard = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [statsRes, alertsRes] = await Promise.all([
-        fetch(`${API_URL}/api/dashboard/stats`),
-        fetch(`${API_URL}/alerts`),
-      ]);
-
-      if (statsRes.ok) {
-        const statsJson = await statsRes.json();
-        setStats(statsJson.data ?? statsJson);
-      }
-
-      if (alertsRes.ok) {
-        const alertsJson: AlertRow[] = await alertsRes.json();
-        setAlertRows(alertsJson.slice(0, 5));
-      }
-    } catch {
-      /* 에러 시 기본값 유지 */
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    loadDashboardData().then(({ stats, alerts }) => {
+      setStats(stats);
+      setAlertRows(alerts);
+      setLoading(false);
+    });
+  }, []);
 
   const handleRowClick = async (row: AlertRow) => {
     setDetailLoading(true);
@@ -105,7 +107,11 @@ export default function DashboardPage() {
       });
       alert("저장 완료! 확인 처리 내역이 기록되었습니다.");
       setConfirmOpen(false);
-      fetchDashboard();
+      setLoading(true);
+      const { stats, alerts } = await loadDashboardData();
+      setStats(stats);
+      setAlertRows(alerts);
+      setLoading(false);
     } catch (e) {
       alert(`저장 실패: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);
     }

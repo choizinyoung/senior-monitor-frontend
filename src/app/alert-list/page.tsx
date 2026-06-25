@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/templates";
 import {
   TopBar,
@@ -42,6 +42,17 @@ type AlertRow = {
   registeredAt: string;
 };
 
+async function fetchAlertsData(severityFilter: string, guFilter: string, dongFilter: string): Promise<AlertRow[]> {
+  const params = new URLSearchParams();
+  if (severityFilter) params.set("severity", severityFilter);
+  if (guFilter) params.set("gu", guFilter);
+  if (dongFilter) params.set("dong", dongFilter);
+  const query = params.toString();
+  const res = await fetch(`${API_URL}/alerts${query ? `?${query}` : ""}`);
+  if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
+  return res.json();
+}
+
 export default function AlertListPage() {
   const [rows, setRows] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,33 +68,26 @@ export default function AlertListPage() {
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
   const [confirmTargetName, setConfirmTargetName] = useState("");
 
-  const fetchAlerts = useCallback(async () => {
+  const fetchAlerts = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams();
-      if (severityFilter) params.set("severity", severityFilter);
-      if (guFilter) params.set("gu", guFilter);
-      if (dongFilter) params.set("dong", dongFilter);
-
-      const query = params.toString();
-      const url = `${API_URL}/alerts${query ? `?${query}` : ""}`;
-
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`서버 오류 (${res.status})`);
-      const data: AlertRow[] = await res.json();
+      const data = await fetchAlertsData(severityFilter, guFilter, dongFilter);
       setRows(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "데이터를 불러올 수 없습니다");
     } finally {
       setLoading(false);
     }
-  }, [severityFilter, guFilter, dongFilter]);
+  };
 
   useEffect(() => {
-    fetchAlerts();
-  }, [fetchAlerts]);
+    let cancelled = false;
+    fetchAlertsData(severityFilter, guFilter, dongFilter)
+      .then((data) => { if (!cancelled) { setRows(data); setError(null); setLoading(false); } })
+      .catch((e) => { if (!cancelled) { setError(e instanceof Error ? e.message : "데이터를 불러올 수 없습니다"); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, [severityFilter, guFilter, dongFilter]);
 
   const handleRowClick = async (row: AlertRow) => {
     setDetailLoading(true);
@@ -124,16 +128,19 @@ export default function AlertListPage() {
 
   const handleSeverityChange = (value: string) => {
     setSeverityFilter(SEVERITY_FILTER_MAP[value] ?? "");
+    setLoading(true);
   };
 
   const handleGuChange = (value: string) => {
     const gu = value === "전체" ? "" : value;
     setGuFilter(gu);
     setDongFilter("");
+    setLoading(true);
   };
 
   const handleDongChange = (value: string) => {
     setDongFilter(value === "전체" ? "" : value);
+    setLoading(true);
   };
 
   const dongOptions = guFilter ? DONG_BY_GU[guFilter] ?? [] : [];
