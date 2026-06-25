@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { AppLayout } from "@/components/templates";
-import { TopBar, RegisterSeniorModal } from "@/components/organisms";
+import { TopBar, RegisterSeniorModal, SeniorDetailModal, ConfirmProcessModal } from "@/components/organisms";
 import { SectionCard, DataTable, RegionSelector } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
 import { Button, StatusBadge, Input, Select, Spinner } from "@/components/atoms";
 import { SENIOR_STATUS_OPTIONS } from "@/constants";
 import { useSeniors } from "@/hooks/useSeniors";
-import { seniorService } from "@/services";
-import type { ApiSenior, SeniorStatusType } from "@/types";
+import { seniorService, alertService } from "@/services";
+import type { ApiSenior, SeniorDetail, SeniorStatusType } from "@/types";
 
 const STATUS_BADGE_MAP: Record<SeniorStatusType, "danger" | "success" | "warning" | "info"> = {
   "정상":       "success",
@@ -27,7 +27,7 @@ export default function SeniorsPage() {
   const {
     seniors, totalElements, totalPages, page,
     setPage, applyFilter, isLoading, error,
-    create, update, remove,
+    refetch, create, update, remove,
   } = useSeniors();
 
   const [nameInput,   setNameInput]   = useState("");
@@ -39,6 +39,50 @@ export default function SeniorsPage() {
   const [registerOpen,  setRegisterOpen]  = useState(false);
   const [editTarget,    setEditTarget]    = useState<ApiSenior | null>(null);
   const [editLoadingId, setEditLoadingId] = useState<number | null>(null);
+
+  const [selectedSenior,  setSelectedSenior]  = useState<SeniorDetail | null>(null);
+  const [detailOpen,      setDetailOpen]      = useState(false);
+  const [detailLoading,   setDetailLoading]   = useState(false);
+  const [confirmOpen,     setConfirmOpen]     = useState(false);
+  const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
+  const [confirmTargetName, setConfirmTargetName] = useState("");
+
+  const handleRowClick = async (r: ApiSenior) => {
+    setDetailLoading(true);
+    setDetailOpen(true);
+    try {
+      const detail = await alertService.getDetail(r.id);
+      setSelectedSenior(detail);
+    } catch {
+      setSelectedSenior(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleConfirmOpen = () => {
+    setDetailOpen(false);
+    setConfirmTargetId(selectedSenior?.id ?? null);
+    setConfirmTargetName(selectedSenior?.name ?? "");
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmSave = async (data: { date: string; time: string; processStatus: string; memo: string }) => {
+    if (!confirmTargetId) return;
+    try {
+      await alertService.confirm(confirmTargetId, {
+        managerName: "담당자",
+        resultStatus: data.processStatus,
+        memo: data.memo,
+        contactedAt: `${data.date}T${data.time}:00`,
+      });
+      alert("저장 완료! 확인 처리 내역이 기록되었습니다.");
+      setConfirmOpen(false);
+      refetch();
+    } catch (e) {
+      alert(`저장 실패: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);
+    }
+  };
 
   const handleEditClick = async (r: ApiSenior) => {
     setEditLoadingId(r.id);
@@ -150,7 +194,7 @@ export default function SeniorsPage() {
         ) : error ? (
           <div className="flex justify-center items-center py-16 text-danger text-sm font-medium">{error}</div>
         ) : (
-          <DataTable columns={columns} rows={seniors} rowKey={(r) => String(r.id)} />
+          <DataTable columns={columns} rows={seniors} rowKey={(r) => String(r.id)} onRowClick={handleRowClick} />
         )}
 
         {!isLoading && !error && totalPages > 1 && (
@@ -172,6 +216,19 @@ export default function SeniorsPage() {
         )}
       </SectionCard>
 
+      <SeniorDetailModal
+        isOpen={detailOpen}
+        onClose={() => { setDetailOpen(false); setSelectedSenior(null); }}
+        senior={detailLoading ? null : selectedSenior}
+        onConfirm={handleConfirmOpen}
+        onEmergency={() => alert("응급 호출 완료\n\n관할 기관에 응급 호출이 전송되었습니다.")}
+      />
+      <ConfirmProcessModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        seniorName={confirmTargetName}
+        onSave={handleConfirmSave}
+      />
       <RegisterSeniorModal
         isOpen={registerOpen}
         onClose={() => setRegisterOpen(false)}

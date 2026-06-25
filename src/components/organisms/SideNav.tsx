@@ -8,6 +8,8 @@ import { ROUTES } from "@/constants";
 import { Avatar } from "@/components/atoms";
 import { useMonitorStore } from "@/store/useMonitorStore";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
+
 const NAV_GROUPS = [
   {
     label: "메인",
@@ -25,7 +27,6 @@ const NAV_GROUPS = [
       {
         href: ROUTES.ALERT_LIST,
         label: "확인요망 리스트",
-        badge: 5,
         icon: (
           <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
@@ -98,12 +99,20 @@ const NAV_GROUPS = [
 
 export default function SideNav() {
   const pathname = usePathname();
-  const { sidebarOpen, closeSidebar } = useMonitorStore();
+  const { sidebarOpen, closeSidebar, alertCount, setAlertCount } = useMonitorStore();
 
-  // 모바일에서 라우트 이동 시 사이드바 닫기
   useEffect(() => {
     closeSidebar();
   }, [pathname, closeSidebar]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/dashboard/stats`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (json) setAlertCount(json.data?.alertCount ?? json.alertCount ?? 0);
+      })
+      .catch(() => {});
+  }, [setAlertCount]);
 
   return (
     <nav
@@ -151,9 +160,9 @@ export default function SideNav() {
                     {item.icon}
                   </span>
                   {item.label}
-                  {"badge" in item && item.badge && (
+                  {item.href === ROUTES.ALERT_LIST && (
                     <span className="ml-auto bg-danger text-white text-[11px] font-bold px-2 py-0.5 rounded-full min-w-[22px] text-center">
-                      {item.badge}
+                      {alertCount}
                     </span>
                   )}
                 </Link>
