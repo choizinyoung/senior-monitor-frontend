@@ -11,8 +11,9 @@ import { Button, SeverityBadge, StatusBadge, Spinner } from "@/components/atoms"
 import { ROUTES } from "@/constants";
 import { alertService } from "@/services";
 import type { SeverityLevel, SeniorDetail } from "@/types";
+import { useMonitorStore } from "@/store/useMonitorStore";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 type Stats = {
   totalSeniors: number;
@@ -61,6 +62,8 @@ export default function DashboardPage() {
   const [alertRows, setAlertRows] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const setAlertCount = useMonitorStore((s) => s.setAlertCount);
+
   const [selectedSenior, setSelectedSenior] = useState<SeniorDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -72,9 +75,10 @@ export default function DashboardPage() {
     loadDashboardData().then(({ stats, alerts }) => {
       setStats(stats);
       setAlertRows(alerts);
+      if (stats) setAlertCount(stats.alertCount);
       setLoading(false);
     });
-  }, []);
+  }, [setAlertCount]);
 
   const handleRowClick = async (row: AlertRow) => {
     setDetailLoading(true);
@@ -111,6 +115,7 @@ export default function DashboardPage() {
       const { stats, alerts } = await loadDashboardData();
       setStats(stats);
       setAlertRows(alerts);
+      if (stats) setAlertCount(stats.alertCount);
       setLoading(false);
     } catch (e) {
       alert(`저장 실패: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);

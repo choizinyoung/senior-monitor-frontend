@@ -20,7 +20,7 @@ import { GU_OPTIONS, DONG_BY_GU } from "@/constants";
 import { alertService } from "@/services";
 import type { SeverityLevel, SeniorDetail } from "@/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 const SEVERITY_FILTER_MAP: Record<string, string> = {
   "중증정도: 전체": "",
