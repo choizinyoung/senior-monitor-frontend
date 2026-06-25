@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, Label, Input } from "@/components/atoms";
 import { RegionSelector } from "@/components/molecules";
 
@@ -39,6 +39,12 @@ export default function RegisterSeniorModal({
   isOpen, onClose, onSave, initialData, mode = "register",
 }: RegisterSeniorModalProps) {
   const [form, setForm] = useState<SeniorForm>({ ...EMPTY, ...initialData });
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm({ ...EMPTY, ...initialData });
+    }
+  }, [isOpen, initialData]);
 
   const setField = (key: keyof SeniorForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
