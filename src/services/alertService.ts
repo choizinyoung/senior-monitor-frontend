@@ -50,6 +50,6 @@ export const alertService = {
 
   confirm: (seniorId: number, dto: ConfirmDto) =>
     apiClient
-      .post<ApiResponse<ApiSenior>>(`/api/alerts/${seniorId}/confirm`, dto)
+      .post<ApiResponse<ApiSenior>>(`/alerts/${seniorId}/confirm`, dto)
       .then((res) => res.data),
 };

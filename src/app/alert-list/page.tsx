@@ -6,6 +6,7 @@ import {
   TopBar,
   SeniorDetailModal,
   ConfirmProcessModal,
+  SignalHistoryModal,
 } from "@/components/organisms";
 import { SectionCard, DataTable } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
@@ -65,6 +66,11 @@ export default function AlertListPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmTargetId, setConfirmTargetId] = useState<number | null>(null);
   const [confirmTargetName, setConfirmTargetName] = useState("");
+  const [confirmFromDetail, setConfirmFromDetail] = useState(false);
+
+  const [signalOpen,       setSignalOpen]       = useState(false);
+  const [signalTargetId,   setSignalTargetId]   = useState<number | null>(null);
+  const [signalTargetName, setSignalTargetName] = useState("");
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -101,10 +107,25 @@ export default function AlertListPage() {
   };
 
   const handleConfirmOpen = (seniorId?: number, seniorName?: string) => {
+    const fromDetail = seniorId === undefined;
+    setConfirmFromDetail(fromDetail);
     setDetailOpen(false);
     setConfirmTargetId(seniorId ?? selectedSenior?.id ?? null);
     setConfirmTargetName(seniorName ?? selectedSenior?.name ?? "");
     setConfirmOpen(true);
+  };
+
+  const refetchDetail = async (seniorId: number) => {
+    setDetailLoading(true);
+    setDetailOpen(true);
+    try {
+      const detail = await alertService.getDetail(seniorId);
+      setSelectedSenior(detail);
+    } catch {
+      setSelectedSenior(null);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleConfirmSave = async (data: { date: string; time: string; processStatus: string; memo: string }) => {
@@ -119,8 +140,27 @@ export default function AlertListPage() {
       alert("저장 완료! 확인 처리 내역이 기록되었습니다.");
       setConfirmOpen(false);
       fetchAlerts();
+      if (confirmFromDetail) refetchDetail(confirmTargetId);
     } catch (e) {
       alert(`저장 실패: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);
+    }
+  };
+
+  const handleEmergency = async () => {
+    if (!selectedSenior) return;
+    const id = selectedSenior.id;
+    try {
+      await alertService.confirm(id, {
+        managerName: "담당자",
+        resultStatus: "응급호출",
+        memo: "",
+        contactedAt: new Date().toISOString().slice(0, 19),
+      });
+      alert("응급 호출 완료\n\n관할 기관에 응급 호출이 전송되었습니다.");
+      fetchAlerts();
+      refetchDetail(id);
+    } catch (e) {
+      alert(`응급 호출 실패: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);
     }
   };
 
@@ -178,6 +218,19 @@ export default function AlertListPage() {
       key: "status",
       header: "상태",
       cell: () => <StatusBadge status="danger" />,
+    },
+    {
+      key: "signals",
+      header: "신호이력",
+      isAction: true,
+      cell: (r) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); setSignalTargetId(r.id); setSignalTargetName(r.name); setSignalOpen(true); }}
+          className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg transition-all duration-150 cursor-pointer shadow-[0_4px_14px_rgba(45,206,137,0.3)] hover:bg-[#24B576] hover:shadow-[0_6px_18px_rgba(45,206,137,0.4)] hover:-translate-y-px" style={{ backgroundColor: "#2dce89" }}
+        >
+          신호이력
+        </button>
+      ),
     },
     {
       key: "action",
@@ -309,15 +362,19 @@ export default function AlertListPage() {
         onClose={() => { setDetailOpen(false); setSelectedSenior(null); }}
         senior={detailLoading ? null : selectedSenior}
         onConfirm={() => handleConfirmOpen()}
-        onEmergency={() =>
-          alert("응급 호출 완료\n\n관할 기관에 응급 호출이 전송되었습니다.")
-        }
+        onEmergency={handleEmergency}
       />
       <ConfirmProcessModal
         isOpen={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         seniorName={confirmTargetName}
         onSave={handleConfirmSave}
+      />
+      <SignalHistoryModal
+        isOpen={signalOpen}
+        onClose={() => setSignalOpen(false)}
+        seniorId={signalTargetId}
+        seniorName={signalTargetName}
       />
     </AppLayout>
   );

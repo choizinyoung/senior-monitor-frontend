@@ -48,7 +48,7 @@ async function loadContacts(p: SearchParams): Promise<ContactRow[]> {
   const query = new URLSearchParams();
   if (p.statusFilter !== "전체") query.set("resultStatus", p.statusFilter);
   const qs = query.toString();
-  const res = await apiClient.get<ApiResponse<ContactRow[]>>(`/api/contacts${qs ? `?${qs}` : ""}`);
+  const res = await apiClient.get<ApiResponse<ContactRow[]>>(`/contacts${qs ? `?${qs}` : ""}`);
   const data: ContactRow[] = res.data ?? [];
 
   return data.filter((r) => {

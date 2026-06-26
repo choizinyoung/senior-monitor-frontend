@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AppLayout } from "@/components/templates";
-import { TopBar, RegisterSeniorModal, SeniorDetailModal, ConfirmProcessModal } from "@/components/organisms";
+import { TopBar, RegisterSeniorModal, SeniorDetailModal, ConfirmProcessModal, SignalHistoryModal } from "@/components/organisms";
 import { SectionCard, DataTable, RegionSelector } from "@/components/molecules";
 import type { DataTableColumn } from "@/components/molecules";
 import { Button, StatusBadge, Input, Select, Spinner } from "@/components/atoms";
@@ -39,6 +39,10 @@ export default function SeniorsPage() {
   const [registerOpen,  setRegisterOpen]  = useState(false);
   const [editTarget,    setEditTarget]    = useState<ApiSenior | null>(null);
   const [editLoadingId, setEditLoadingId] = useState<number | null>(null);
+
+  const [signalOpen,       setSignalOpen]       = useState(false);
+  const [signalTargetId,   setSignalTargetId]   = useState<number | null>(null);
+  const [signalTargetName, setSignalTargetName] = useState("");
 
   const [selectedSenior,  setSelectedSenior]  = useState<SeniorDetail | null>(null);
   const [detailOpen,      setDetailOpen]      = useState(false);
@@ -114,6 +118,19 @@ export default function SeniorsPage() {
     { key: "deviceId",    header: "디바이스 ID", cell: (r) => r.deviceId, hideOnMobile: true },
     { key: "status",      header: "상태",       cell: (r) => <StatusBadge status={STATUS_BADGE_MAP[r.status]} label={r.status} /> },
     { key: "registeredAt",header: "등록일",     cell: (r) => formatDate(r.registeredAt), hideOnMobile: true },
+    {
+      key: "signals",
+      header: "신호이력",
+      isAction: true,
+      cell: (r) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); setSignalTargetId(r.id); setSignalTargetName(r.name); setSignalOpen(true); }}
+          className="px-3.5 py-1.5 text-xs font-semibold text-white rounded-lg transition-all duration-150 cursor-pointer shadow-[0_4px_14px_rgba(45,206,137,0.3)] hover:bg-[#24B576] hover:shadow-[0_6px_18px_rgba(45,206,137,0.4)] hover:-translate-y-px" style={{ backgroundColor: "#2dce89" }}
+        >
+          신호이력
+        </button>
+      ),
+    },
     {
       key: "actions",
       header: "관리",
@@ -216,6 +233,12 @@ export default function SeniorsPage() {
         )}
       </SectionCard>
 
+      <SignalHistoryModal
+        isOpen={signalOpen}
+        onClose={() => setSignalOpen(false)}
+        seniorId={signalTargetId}
+        seniorName={signalTargetName}
+      />
       <SeniorDetailModal
         isOpen={detailOpen}
         onClose={() => { setDetailOpen(false); setSelectedSenior(null); }}

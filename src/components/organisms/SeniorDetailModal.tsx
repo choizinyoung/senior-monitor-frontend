@@ -35,9 +35,15 @@ function formatDateTime(iso: string) {
 export default function SeniorDetailModal({ isOpen, onClose, senior, onConfirm, onEmergency }: SeniorDetailModalProps) {
   const [activeContact, setActiveContact] = useState<ContactHistory | null>(null);
 
+  const sortedContacts = senior?.contacts
+    ? [...senior.contacts].sort(
+        (a, b) => new Date(b.contactedAt).getTime() - new Date(a.contactedAt).getTime()
+      )
+    : [];
+
   useEffect(() => {
-    if (senior?.contacts?.length) {
-      setActiveContact(senior.contacts[0]);
+    if (sortedContacts.length) {
+      setActiveContact(sortedContacts[0]);
     } else {
       setActiveContact(null);
     }
@@ -93,12 +99,12 @@ export default function SeniorDetailModal({ isOpen, onClose, senior, onConfirm, 
 
       <h4 className="text-sm font-bold text-text-main mb-3">최근 연락 이력</h4>
 
-      {senior.contacts.length === 0 ? (
+      {sortedContacts.length === 0 ? (
         <p className="text-sm text-text-sub text-center py-6">연락 이력이 없습니다.</p>
       ) : (
         <div className="flex flex-col sm:grid sm:gap-4" style={{ gridTemplateColumns: "190px 1fr" }}>
           <ul className="flex flex-row sm:flex-col gap-1 overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0 mb-3 sm:mb-0">
-            {senior.contacts.map((c) => (
+            {sortedContacts.map((c) => (
               <li
                 key={c.id}
                 onClick={() => setActiveContact(c)}
